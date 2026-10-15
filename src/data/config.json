@@ -5,5 +5,6 @@
   "schemaVersion": 1,
   "forecastMonths": 6,
   "recurrenceHistoryMonths": 12,
-  "recurrenceHorizonMonths": 6
+  "recurrenceHorizonMonths": 6,
+  "financeApiUrl": "https://script.google.com/macros/s/AKfycbwX16GU7wSSLEB9p8kbrrMTc9DA7GEENzH6dZ6KD1w5TaZx3rSbj980AvIGbahRl40/exec"
 }
