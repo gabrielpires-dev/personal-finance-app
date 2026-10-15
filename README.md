@@ -46,7 +46,7 @@ O arquivo contém configurações, categorias, cartões, lançamentos, recorrên
 
 ## Publicação no Azure Static Web Apps
 
-O plano gratuito é suficiente. O site é estático e a API em `api/` grava um único arquivo JSON no armazenamento do Azure, compartilhado entre telefone e computadores.
+O plano gratuito publica o site. Os lançamentos ficam no arquivo `data/finance.json` da máquina que executa o servidor.
 
 1. Envie o repositório para o GitHub.
 2. Crie um Static Web App apontando para o repositório.
