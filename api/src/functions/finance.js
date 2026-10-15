@@ -1,39 +1,16 @@
 import { app } from '@azure/functions'
-import { BlobServiceClient } from '@azure/storage-blob'
+import { authorize } from '../auth-core.js'
 import { emptyDatabase, normalizeDatabase } from './normalize.js'
+import { readBlobJson, writeBlobJson } from './storage.js'
 
-const containerName = 'finance'
 const blobName = 'finance.json'
+const authBlobName = 'auth.json'
 
-function storageConnection() {
-  const keys = ['FINANCE_STORAGE_CONNECTION_STRING', 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING']
-  for (const key of keys) {
-    const value = process.env[key]
-    if (value && value.includes('AccountName=') && value.includes('AccountKey=')) return value
-  }
-  throw new Error('O armazenamento do servidor não está configurado.')
-}
-
-function financeBlob() {
-  const container = BlobServiceClient.fromConnectionString(storageConnection()).getContainerClient(containerName)
-  return { container, blob: container.getBlockBlobClient(blobName) }
-}
-
-async function readFinanceFile() {
-  const { container, blob } = financeBlob()
-  await container.createIfNotExists()
-  if (!(await blob.exists())) return emptyDatabase()
-  return normalizeDatabase(JSON.parse((await blob.downloadToBuffer()).toString('utf8')))
-}
-
-async function writeFinanceFile(value) {
-  const next = normalizeDatabase(value)
-  const { container, blob } = financeBlob()
-  await container.createIfNotExists()
-  const body = `${JSON.stringify(next, null, 2)}\n`
-  await blob.upload(body, Buffer.byteLength(body), {
-    blobHTTPHeaders: { blobContentType: 'application/json' },
-  })
+async function requireSession(request) {
+  const state = await readBlobJson(authBlobName)
+  const gate = authorize(state, request.headers.get('authorization'))
+  if (gate.ok) return null
+  return { status: 401, jsonBody: { error: 'Sessão expirada. Entre novamente.' } }
 }
 
 app.http('finance', {
@@ -42,9 +19,14 @@ app.http('finance', {
   route: 'finance',
   handler: async (request) => {
     try {
-      if (request.method === 'GET') return { jsonBody: await readFinanceFile() }
+      const denied = await requireSession(request)
+      if (denied) return denied
+      if (request.method === 'GET') {
+        const stored = await readBlobJson(blobName)
+        return { jsonBody: stored ? normalizeDatabase(stored) : emptyDatabase() }
+      }
       if (request.method === 'PUT') {
-        await writeFinanceFile(await request.json())
+        await writeBlobJson(blobName, normalizeDatabase(await request.json()))
         return { jsonBody: { ok: true } }
       }
       return { status: 405, headers: { Allow: 'GET, PUT' }, body: 'Método não permitido.' }

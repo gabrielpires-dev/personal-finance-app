@@ -1,4 +1,5 @@
 import Dexie from 'dexie'
+import { authFetch } from '@/auth/api'
 
 export interface MemoryTable<T extends { id: string }> {
   toArray(): Promise<T[]>
@@ -174,7 +175,7 @@ class FinanceDatabase {
 
   async save() {
     if (this.hydrating || this.txDepth > 0) return
-    const response = await fetch('/api/finance', {
+    const response = await authFetch('/api/finance', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(this.snapshot()),
@@ -187,7 +188,7 @@ class FinanceDatabase {
 
   async open() {
     if (this.opened) return
-    const response = await fetch('/api/finance', { headers: { Accept: 'application/json' } })
+    const response = await authFetch('/api/finance', { headers: { Accept: 'application/json' } })
     const type = response.headers.get('content-type') ?? ''
     if (!response.ok || !type.includes('application/json')) {
       const detail = await response.text()

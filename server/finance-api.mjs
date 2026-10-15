@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { emptyDatabase, normalizeDatabase } from '../api/src/functions/normalize.js'
+import { authorizeHeader, handleAuth } from './auth-api.mjs'
 
 const filePath = join(process.cwd(), 'data', 'finance.json')
 
@@ -34,6 +35,13 @@ async function writeDatabase(value) {
 
 export async function handleFinance(req, res) {
   try {
+    const gate = await authorizeHeader(req.headers.authorization)
+    if (!gate.ok) {
+      res.statusCode = 401
+      res.setHeader('Content-Type', 'application/json; charset=utf-8')
+      res.end(JSON.stringify({ error: 'Sessão expirada. Entre novamente.' }))
+      return
+    }
     if (req.method === 'GET') {
       const data = await readDatabase()
       res.statusCode = 200
@@ -64,6 +72,10 @@ export async function handleFinance(req, res) {
 export function financeApi() {
   const middleware = (req, res, next) => {
     const path = req.url?.split('?')[0]
+    if (path === '/api/auth/login' || path === '/api/auth/refresh') {
+      handleAuth(req, res).catch(next)
+      return
+    }
     if (path !== '/api/finance') return next()
     handleFinance(req, res).catch(next)
   }

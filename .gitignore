@@ -8,3 +8,5 @@ dev-dist
 *.tsbuildinfo
 data/finance.json
 data/finance.json.tmp
+data/auth.json
+data/auth.json.tmp
