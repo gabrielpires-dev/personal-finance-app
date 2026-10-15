@@ -134,7 +134,16 @@ async function callDrive(body: Record<string, unknown>) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  const data = (await response.json().catch(() => ({}))) as DriveResult
+  const text = await response.text()
+  if (text.includes('Script function not found')) {
+    throw new Error('Publique uma nova versão do Apps Script. A versão no ar ainda não tem o código do arquivo.')
+  }
+  let data: DriveResult
+  try {
+    data = JSON.parse(text) as DriveResult
+  } catch {
+    throw new Error('O Drive não respondeu com JSON.')
+  }
   if (!response.ok || data.ok === false) throw new Error(data.error || 'Não foi possível entrar.')
   return data
 }
