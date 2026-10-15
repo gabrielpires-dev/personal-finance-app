@@ -190,7 +190,8 @@ class FinanceDatabase {
     const response = await fetch('/api/finance', { headers: { Accept: 'application/json' } })
     const type = response.headers.get('content-type') ?? ''
     if (!response.ok || !type.includes('application/json')) {
-      throw new Error('Não foi possível ler o banco no servidor.')
+      const detail = await response.text()
+      throw new Error(detail.trim() || 'Não foi possível ler o banco no servidor.')
     }
     let data = (await response.json()) as DatabaseFile
     let migrated = false

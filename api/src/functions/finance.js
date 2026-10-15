@@ -5,10 +5,17 @@ import { emptyDatabase, normalizeDatabase } from './normalize.js'
 const containerName = 'finance'
 const blobName = 'finance.json'
 
+function storageConnection() {
+  const keys = ['FINANCE_STORAGE_CONNECTION_STRING', 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING']
+  for (const key of keys) {
+    const value = process.env[key]
+    if (value && value.includes('AccountName=') && value.includes('AccountKey=')) return value
+  }
+  throw new Error('O armazenamento do servidor não está configurado.')
+}
+
 function financeBlob() {
-  const connection = process.env.AzureWebJobsStorage
-  if (!connection) throw new Error('O armazenamento do servidor não está configurado.')
-  const container = BlobServiceClient.fromConnectionString(connection).getContainerClient(containerName)
+  const container = BlobServiceClient.fromConnectionString(storageConnection()).getContainerClient(containerName)
   return { container, blob: container.getBlockBlobClient(blobName) }
 }
 
