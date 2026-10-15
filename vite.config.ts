@@ -35,7 +35,8 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,json}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+        globIgnores: ['**/staticwebapp.config.json'],
       },
       devOptions: {
         enabled: false,

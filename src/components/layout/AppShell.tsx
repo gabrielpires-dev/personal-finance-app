@@ -3,6 +3,7 @@ import { CalendarRange, Contact, CreditCard, Landmark, LayoutDashboard, Menu, Pl
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { CompetenceSwitcher } from '@/components/finance/CompetenceSwitcher'
 import { isCompetence } from '@/domain/dates'
+import { storesOnServer } from '@/db/database'
 import { useFinance } from '@/state/FinanceContext'
 import { cn } from '@/lib/cn'
 
@@ -50,7 +51,7 @@ export function AppShell() {
           <img src="/profile.jpg" alt="" className="h-11 w-11 rounded-full object-cover" />
           <div>
             <p className="font-semibold">Personal Finance</p>
-            <p className="text-xs text-muted-foreground">Arquivo no servidor</p>
+            <p className="text-xs text-muted-foreground">{storesOnServer() ? 'Arquivo no servidor' : 'Neste navegador'}</p>
           </div>
         </div>
         <nav className="mt-8 flex flex-col gap-1" aria-label="Principal">
@@ -97,7 +98,9 @@ export function AppShell() {
           </NavLink>
         </nav>
         <p className="mt-auto px-2 text-xs leading-5 text-muted-foreground">
-          Os dados ficam no arquivo do servidor. Faça backup para recuperar ou mudar de aparelho.
+          {storesOnServer()
+            ? 'Os dados ficam no arquivo do servidor. Faça backup para recuperar ou mudar de aparelho.'
+            : 'Os dados ficam neste navegador. Faça backup para recuperar ou mudar de aparelho.'}
           {backup ? ` Último backup: ${backup}.` : ''}
         </p>
       </aside>
