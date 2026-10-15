@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  --color-background: #f3f6f4;
+  --color-foreground: #14211b;
+  --color-card: #ffffff;
+  --color-primary: #1f8a4c;
+  --color-primary-foreground: #f4fff7;
+  --color-secondary: #e7f5ec;
+  --color-muted: #e6eee9;
+  --color-muted-foreground: #4e5e56;
+  --color-border: #d5e2da;
+  --color-income: #146c36;
+  --color-expense: #a33b3b;
+  --color-ring: #1f8a4c;
+  --radius-xl: 1rem;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+  }
+
+  #root {
+    min-height: 100%;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes month-forward {
+  from {
+    transform: translate3d(100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes month-back {
+  from {
+    transform: translate3d(-100%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.month-forward {
+  animation: month-forward 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.month-back {
+  animation: month-back 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}

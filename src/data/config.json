@@ -1,0 +1,9 @@
+{
+  "appName": "Personal Finance",
+  "currency": "BRL",
+  "locale": "pt-BR",
+  "schemaVersion": 1,
+  "forecastMonths": 6,
+  "recurrenceHistoryMonths": 12,
+  "recurrenceHorizonMonths": 6
+}

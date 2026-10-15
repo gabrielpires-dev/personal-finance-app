@@ -1,0 +1,28 @@
+{
+  "categories": [
+    { "id": "cat-salario", "name": "Salário", "kind": "income", "icon": "banknote" },
+    { "id": "cat-beneficios", "name": "Benefícios", "kind": "income", "icon": "gift" },
+    { "id": "cat-renda-extra", "name": "Renda extra", "kind": "income", "icon": "coins" },
+    { "id": "cat-reembolsos", "name": "Reembolsos", "kind": "income", "icon": "handCoins" },
+    { "id": "cat-receita-outros", "name": "Outros", "kind": "income", "icon": "tag" },
+    { "id": "cat-moradia", "name": "Moradia", "kind": "expense", "icon": "home" },
+    { "id": "cat-alimentacao", "name": "Alimentação", "kind": "expense", "icon": "utensils" },
+    { "id": "cat-transporte", "name": "Transporte", "kind": "expense", "icon": "bus" },
+    { "id": "cat-combustivel", "name": "Combustível", "kind": "expense", "icon": "fuel" },
+    { "id": "cat-saude", "name": "Saúde", "kind": "expense", "icon": "heartPulse" },
+    { "id": "cat-educacao", "name": "Educação", "kind": "expense", "icon": "graduationCap" },
+    { "id": "cat-academia", "name": "Academia", "kind": "expense", "icon": "dumbbell" },
+    { "id": "cat-assinaturas", "name": "Assinaturas", "kind": "expense", "icon": "repeat" },
+    { "id": "cat-pets", "name": "Pets", "kind": "expense", "icon": "pawPrint" },
+    { "id": "cat-lazer", "name": "Lazer", "kind": "expense", "icon": "ticket" },
+    { "id": "cat-impostos", "name": "Impostos", "kind": "expense", "icon": "landmark" },
+    { "id": "cat-cartao", "name": "Cartão de crédito", "kind": "expense", "icon": "creditCard" },
+    { "id": "cat-despesa-outros", "name": "Outros", "kind": "expense", "icon": "tag" }
+  ],
+  "transactions": [],
+  "settlements": [],
+  "recurrences": [],
+  "creditCards": [],
+  "purchases": [],
+  "installmentGroups": []
+}

@@ -1,0 +1,9 @@
+node_modules
+dist
+dev-dist
+.vite
+*.local
+.DS_Store
+*.tsbuildinfo
+data/finance.json
+data/finance.json.tmp
