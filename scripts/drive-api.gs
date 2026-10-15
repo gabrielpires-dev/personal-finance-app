@@ -2,27 +2,42 @@ var USERNAME = '12213457611'
 var SESSION_MS = 30 * 24 * 60 * 60 * 1000
 var LOCK_MESSAGE = 'Acesso bloqueado após 3 tentativas de senha.'
 
-function doGet() {
-  return json({ ok: true, service: 'personal-finance' })
+function doGet(e) {
+  var params = e && e.parameter ? e.parameter : {}
+  var callback = String(params.callback || '')
+  if (!/^pfDrive_[A-Za-z0-9]+$/.test(callback)) callback = ''
+  var payload = params.id ? readResult(String(params.id)) : { ok: true, service: 'personal-finance' }
+  var text = JSON.stringify(payload).replace(/</g, '\\u003c')
+  if (callback) return ContentService.createTextOutput(callback + '(' + text + ')').setMimeType(ContentService.MimeType.JAVASCRIPT)
+  return json(payload)
 }
 
 function doPost(e) {
   var lock = LockService.getScriptLock()
-  lock.waitLock(15000)
+  lock.waitLock(20000)
+  var requestId = ''
   try {
     var body = {}
     if (e && e.postData && e.postData.contents) body = JSON.parse(e.postData.contents)
-    var action = body.action
-    if (action === 'login') return json(login(body.username, body.password))
-    if (action === 'refresh') return json(refresh(body.refreshToken))
-    if (action === 'get') return json(readFinance(body.accessToken))
-    if (action === 'put') return json(writeFinance(body.accessToken, body.data))
-    return json({ ok: false, status: 400, error: 'Ação inválida.' })
+    requestId = String(body.requestId || '')
+    var result = dispatch(body)
+    if (requestId) saveResult(requestId, result)
+    return json(result)
   } catch (error) {
-    return json({ ok: false, status: 400, error: error && error.message ? error.message : 'Falha ao acessar o arquivo.' })
+    var failed = { ok: false, status: 400, error: error && error.message ? error.message : 'Falha ao acessar o arquivo.' }
+    if (requestId) saveResult(requestId, failed)
+    return json(failed)
   } finally {
     lock.releaseLock()
   }
+}
+
+function dispatch(body) {
+  if (body.action === 'login') return login(body.username, body.password)
+  if (body.action === 'refresh') return refresh(body.refreshToken)
+  if (body.action === 'get') return readFinance(body.accessToken)
+  if (body.action === 'put') return writeFinance(body.accessToken, body.data)
+  return { ok: false, status: 400, error: 'Ação inválida.' }
 }
 
 function login(username, password) {
@@ -154,20 +169,48 @@ function emptyFinance() {
   }
 }
 
-function driveFile(name, seed) {
+function saveResult(id, value) {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return
+  var folder = resultsFolder()
+  var name = id + '.json'
+  var files = folder.getFilesByName(name)
+  var content = JSON.stringify(value)
+  if (files.hasNext()) files.next().setContent(content)
+  else folder.createFile(name, content, MimeType.PLAIN_TEXT)
+}
+
+function readResult(id) {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { ok: false, error: 'Pedido inválido.' }
+  var files = resultsFolder().getFilesByName(id + '.json')
+  if (!files.hasNext()) return { ok: false, pending: true }
+  var file = files.next()
+  var value = JSON.parse(file.getBlob().getDataAsString())
+  file.setTrashed(true)
+  return value
+}
+
+function resultsFolder() {
+  var parent = folder()
+  var children = parent.getFoldersByName('results')
+  if (children.hasNext()) return children.next()
+  return parent.createFolder('results')
+}
+
+function folder() {
   var props = PropertiesService.getScriptProperties()
   var folderId = props.getProperty('FOLDER_ID')
-  var folder = null
   if (folderId) {
-    try { folder = DriveApp.getFolderById(folderId) } catch (error) { folder = null }
+    try { return DriveApp.getFolderById(folderId) } catch (error) { folderId = '' }
   }
-  if (!folder) {
-    folder = DriveApp.createFolder('personal-finance-app')
-    props.setProperty('FOLDER_ID', folder.getId())
-  }
-  var files = folder.getFilesByName(name)
+  var created = DriveApp.createFolder('personal-finance-app')
+  props.setProperty('FOLDER_ID', created.getId())
+  return created
+}
+
+function driveFile(name, seed) {
+  var files = folder().getFilesByName(name)
   if (files.hasNext()) return files.next()
-  return folder.createFile(name, seed, MimeType.PLAIN_TEXT)
+  return folder().createFile(name, seed, MimeType.PLAIN_TEXT)
 }
 
 function tokenHash(token) {

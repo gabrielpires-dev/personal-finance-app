@@ -89,34 +89,88 @@ export async function authFetch(input: string, init: RequestInit = {}) {
   return fetch(input, { ...init, headers: withAccess(init.headers) })
 }
 
+interface DriveResult {
+  ok?: boolean
+  pending?: boolean
+  status?: number
+  error?: string
+  data?: unknown
+  accessToken?: string
+  refreshToken?: string
+  expiresAt?: string
+}
+
 async function driveFinance(init: RequestInit, allowRefresh: boolean): Promise<Response> {
   const accessToken = localStorage.getItem(accessKey) ?? ''
   const action = init.method === 'PUT' ? 'put' : 'get'
   const payload: Record<string, unknown> = { action, accessToken }
   if (action === 'put') payload.data = JSON.parse(String(init.body ?? '{}'))
-  const response = await fetch(driveUrl, { method: 'POST', body: JSON.stringify(payload) })
-  const data = (await response.json().catch(() => ({}))) as { ok?: boolean; status?: number; error?: string; data?: unknown }
-  if (data.status === 401 && allowRefresh) {
-    const renewed = await refreshSession()
-    if (renewed) return driveFinance(init, false)
-  }
-  if (data.ok === false) {
-    return new Response(data.error || 'Falha ao acessar o arquivo.', {
-      status: data.status || 400,
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  try {
+    const data = await callDrive(payload)
+    if (data.status === 401 && allowRefresh) {
+      const renewed = await refreshSession()
+      if (renewed) return driveFinance(init, false)
+    }
+    return new Response(JSON.stringify(action === 'get' ? data.data : { ok: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
     })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Falha ao acessar o arquivo.'
+    const status = message.includes('Sessão expirada') ? 401 : 400
+    return new Response(message, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
   }
-  return new Response(JSON.stringify(action === 'get' ? data.data : { ok: true }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  })
 }
 
 async function drivePost(body: Record<string, unknown>) {
-  const response = await fetch(driveUrl, { method: 'POST', body: JSON.stringify(body) })
-  const data = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string; accessToken?: string; refreshToken?: string }
-  if (!response.ok || data.ok === false) throw new Error(data.error || 'Não foi possível entrar.')
+  const data = await callDrive(body)
+  if (!data.accessToken || !data.refreshToken) throw new Error(data.error || 'Não foi possível entrar.')
   return data
+}
+
+async function callDrive(body: Record<string, unknown>) {
+  const requestId = crypto.randomUUID()
+  try {
+    const response = await fetch(driveUrl, { method: 'POST', body: JSON.stringify({ ...body, requestId }) })
+    const data = (await response.json()) as DriveResult
+    if (data.pending !== true) {
+      if (data.ok === false) throw new Error(data.error || 'Não foi possível entrar.')
+      return data
+    }
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error
+  }
+  const data = await pollDrive(requestId)
+  if (data.ok === false) throw new Error(data.error || 'Não foi possível entrar.')
+  return data
+}
+
+async function pollDrive(requestId: string) {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const data = await jsonp(requestId)
+    if (!data.pending) return data
+    await new Promise((resolve) => setTimeout(resolve, 400))
+  }
+  return { ok: false, error: 'O Drive não respondeu.' }
+}
+
+function jsonp(requestId: string) {
+  const callback = `pfDrive_${requestId.replaceAll('-', '')}`
+  return new Promise<DriveResult>((resolve, reject) => {
+    const script = document.createElement('script')
+    const timer = window.setTimeout(() => finish(new Error('O Drive não respondeu.')), 8000)
+    const finish = (error?: Error, value?: DriveResult) => {
+      window.clearTimeout(timer)
+      delete (window as unknown as Record<string, unknown>)[callback]
+      script.remove()
+      if (error) reject(error)
+      else resolve(value ?? { ok: false, pending: true })
+    }
+    ;(window as unknown as Record<string, (value: DriveResult) => void>)[callback] = (value) => finish(undefined, value)
+    script.onerror = () => finish(undefined, { ok: false, pending: true })
+    script.src = `${driveUrl}?id=${encodeURIComponent(requestId)}&callback=${callback}`
+    document.body.appendChild(script)
+  })
 }
 
 function withAccess(headers: HeadersInit | undefined) {
