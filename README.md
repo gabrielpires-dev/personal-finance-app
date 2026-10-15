@@ -46,15 +46,15 @@ O arquivo contém configurações, categorias, cartões, lançamentos, recorrên
 
 ## Publicação no Azure Static Web Apps
 
-O plano gratuito é suficiente: o site é estático e não usa API.
+O plano gratuito é suficiente. O site é estático e a API em `api/` grava um único arquivo JSON no armazenamento do Azure, compartilhado entre telefone e computadores.
 
 1. Envie o repositório para o GitHub.
 2. Crie um Static Web App apontando para o repositório.
 3. Use estes valores:
    - App location: `/`
-   - Api location: vazio
+   - Api location: `api`
    - Output location: `dist`
-4. O workflow em `.github/workflows/azure-static-web-apps.yml` espera o segredo `AZURE_STATIC_WEB_APPS_API_TOKEN`.
+4. O workflow em `.github/workflows/` espera o segredo do token do Static Web App.
 
 `public/staticwebapp.config.json` é copiado para o build e devolve `index.html` nas rotas da SPA, para que atualizar a página em `/mes` continue funcionando.
 

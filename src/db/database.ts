@@ -118,7 +118,6 @@ class FinanceDatabase {
   txDepth = 0
   hydrating = false
   opened = false
-  server = false
 
   categories = table<import('@/domain/types').Category>(() => this.touch())
   transactions = table<import('@/domain/types').Transaction>(() => this.touch())
@@ -175,15 +174,10 @@ class FinanceDatabase {
 
   async save() {
     if (this.hydrating || this.txDepth > 0) return
-    const snapshot = this.snapshot()
-    if (!this.server) {
-      await writeBrowserDatabase(snapshot)
-      return
-    }
     const response = await fetch('/api/finance', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(snapshot),
+      body: JSON.stringify(this.snapshot()),
     })
     if (!response.ok) {
       const detail = await response.text()
@@ -193,9 +187,12 @@ class FinanceDatabase {
 
   async open() {
     if (this.opened) return
-    const remote = await readServerDatabase()
-    this.server = remote.available
-    let data = remote.available ? remote.data : await readBrowserDatabase()
+    const response = await fetch('/api/finance', { headers: { Accept: 'application/json' } })
+    const type = response.headers.get('content-type') ?? ''
+    if (!response.ok || !type.includes('application/json')) {
+      throw new Error('Não foi possível ler o banco no servidor.')
+    }
+    let data = (await response.json()) as DatabaseFile
     let migrated = false
     if (isEmptyDatabase(data)) {
       const legacy = await readLegacyDatabase()
@@ -230,58 +227,6 @@ class FinanceDatabase {
 }
 
 export const db = new FinanceDatabase()
-
-export function storesOnServer() {
-  return db.server
-}
-
-const browserStore = new Dexie('personal-finance-browser')
-browserStore.version(1).stores({ snapshot: 'id' })
-
-function emptyDatabaseFile(): DatabaseFile {
-  return {
-    categories: [],
-    transactions: [],
-    settlements: [],
-    recurrences: [],
-    creditCards: [],
-    purchases: [],
-    installmentGroups: [],
-    parties: [],
-    banks: [],
-    bankTransfers: [],
-    bankBalances: [],
-    listOrders: [],
-    settings: null,
-  }
-}
-
-async function readServerDatabase(): Promise<{ available: true; data: DatabaseFile } | { available: false }> {
-  let response: Response
-  try {
-    response = await fetch('/api/finance', { headers: { Accept: 'application/json' } })
-  } catch {
-    throw new Error('Não foi possível ler o banco no servidor.')
-  }
-  const type = response.headers.get('content-type') ?? ''
-  if (response.status === 404 || type.includes('text/html')) return { available: false }
-  if (!response.ok) throw new Error('Não foi possível ler o banco no servidor.')
-  const text = await response.text()
-  try {
-    return { available: true, data: JSON.parse(text) as DatabaseFile }
-  } catch {
-    return { available: false }
-  }
-}
-
-async function readBrowserDatabase(): Promise<DatabaseFile> {
-  const row = await browserStore.table<{ id: string; data: DatabaseFile }>('snapshot').get('app')
-  return row?.data ?? emptyDatabaseFile()
-}
-
-async function writeBrowserDatabase(data: DatabaseFile) {
-  await browserStore.table<{ id: string; data: DatabaseFile }>('snapshot').put({ id: 'app', data })
-}
 
 function isEmptyDatabase(data: DatabaseFile) {
   return (

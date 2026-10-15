@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { parseBackup } from '@/domain/backup'
-import { storesOnServer } from '@/db/database'
 import * as finance from '@/db/finance-repository'
 import { useFinance } from '@/state/FinanceContext'
 import { Button } from '@/components/ui/button'
@@ -58,9 +57,7 @@ export function SettingsPage() {
       <header>
         <h1 className="text-2xl font-semibold">Ajustes</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          {storesOnServer()
-            ? 'Os lançamentos ficam no arquivo data/finance.json no servidor da aplicação. O navegador só exibe o que esse arquivo contém. Exporte um backup para recuperar ou migrar.'
-            : 'Nesta publicação não há servidor de dados. Os lançamentos ficam neste navegador. Exporte um backup para recuperar ou migrar.'}
+          Os lançamentos ficam no arquivo data/finance.json no servidor da aplicação. O navegador só exibe o que esse arquivo contém. Exporte um backup para recuperar ou migrar.
         </p>
       </header>
       {message ? <p className="rounded-2xl bg-secondary px-4 py-3 text-sm text-income">{message}</p> : null}
@@ -90,9 +87,7 @@ export function SettingsPage() {
           <div className="rounded-2xl border border-border p-3">
             <label className="flex items-start gap-2 text-sm">
               <input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />
-              {storesOnServer()
-                ? 'Substituir todos os dados do servidor pelo conteúdo do arquivo.'
-                : 'Substituir todos os dados deste navegador pelo conteúdo do arquivo.'}
+              Substituir todos os dados do servidor pelo conteúdo do arquivo.
             </label>
             <Button
               className="mt-3"
@@ -132,12 +127,8 @@ export function SettingsPage() {
 
       <ConfirmDialog
         open={clearOpen}
-        title={storesOnServer() ? 'Apagar todos os dados do servidor' : 'Apagar todos os dados deste navegador'}
-        description={
-          storesOnServer()
-            ? 'Esta ação remove lançamentos, baixas, cartões, recorrências e categorias personalizadas do arquivo do servidor. Exporte um backup antes se quiser recuperá-los.'
-            : 'Esta ação remove lançamentos, baixas, cartões, recorrências e categorias personalizadas deste navegador. Exporte um backup antes se quiser recuperá-los.'
-        }
+        title="Apagar todos os dados do servidor"
+        description="Esta ação remove lançamentos, baixas, cartões, recorrências e categorias personalizadas do arquivo do servidor. Exporte um backup antes se quiser recuperá-los."
         confirmLabel="Apagar dados"
         destructive
         onOpenChange={setClearOpen}

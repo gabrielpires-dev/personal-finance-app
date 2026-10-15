@@ -1,4 +1,5 @@
 node_modules
+api/local.settings.json
 dist
 dev-dist
 .vite

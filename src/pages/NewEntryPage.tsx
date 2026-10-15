@@ -8,7 +8,6 @@ import { buildOccurrences } from '@/domain/recurrence'
 import { resolveCategoryIcon } from '@/domain/category-icons'
 import { parseMoneyInput } from '@/domain/money'
 import type { CreditCard, EntryKind, Frequency, PaymentMethod, Recurrence } from '@/domain/types'
-import { storesOnServer } from '@/db/database'
 import * as finance from '@/db/finance-repository'
 import { useFinance } from '@/state/FinanceContext'
 import { frequencyLabels, paymentChoices, paymentLabels } from '@/lib/labels'
@@ -283,11 +282,7 @@ export function NewEntryPage() {
     return (
       <section className="mx-auto max-w-lg rounded-3xl border border-border bg-card p-5 shadow-sm">
         <h1 className="text-2xl font-semibold">Lançamento salvo</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {storesOnServer()
-            ? 'Ele foi gravado no arquivo do servidor e continua disponível ao abrir a aplicação de novo.'
-            : 'Ele foi gravado neste navegador e continua disponível ao abrir a aplicação de novo neste aparelho.'}
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">Ele foi gravado no arquivo do servidor e continua disponível ao abrir a aplicação de novo.</p>
         <div className="mt-5 flex flex-col gap-2">
           <Button
             onClick={() => {
