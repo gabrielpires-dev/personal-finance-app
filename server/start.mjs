@@ -2,6 +2,7 @@ import { createReadStream, existsSync, statSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { extname, join, normalize, sep } from 'node:path'
 import { handleAuth } from './auth-api.mjs'
+import { handleDrive } from './drive-proxy.mjs'
 import { handleFinance } from './finance-api.mjs'
 
 const dist = join(process.cwd(), 'dist')
@@ -28,6 +29,13 @@ function fileFor(urlPath) {
 
 createServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost')
+  if (url.pathname === '/api/drive') {
+    handleDrive(req, res).catch(() => {
+      res.statusCode = 500
+      res.end('Falha ao falar com o Drive.')
+    })
+    return
+  }
   if (url.pathname === '/api/auth/login' || url.pathname === '/api/auth/refresh') {
     handleAuth(req, res).catch(() => {
       res.statusCode = 500

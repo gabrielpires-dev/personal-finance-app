@@ -129,48 +129,14 @@ async function drivePost(body: Record<string, unknown>) {
 }
 
 async function callDrive(body: Record<string, unknown>) {
-  const requestId = crypto.randomUUID()
-  try {
-    const response = await fetch(driveUrl, { method: 'POST', body: JSON.stringify({ ...body, requestId }) })
-    const data = (await response.json()) as DriveResult
-    if (data.pending !== true) {
-      if (data.ok === false) throw new Error(data.error || 'Não foi possível entrar.')
-      return data
-    }
-  } catch (error) {
-    if (!(error instanceof TypeError)) throw error
-  }
-  const data = await pollDrive(requestId)
-  if (data.ok === false) throw new Error(data.error || 'Não foi possível entrar.')
-  return data
-}
-
-async function pollDrive(requestId: string) {
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    const data = await jsonp(requestId)
-    if (!data.pending) return data
-    await new Promise((resolve) => setTimeout(resolve, 400))
-  }
-  return { ok: false, error: 'O Drive não respondeu.' }
-}
-
-function jsonp(requestId: string) {
-  const callback = `pfDrive_${requestId.replaceAll('-', '')}`
-  return new Promise<DriveResult>((resolve, reject) => {
-    const script = document.createElement('script')
-    const timer = window.setTimeout(() => finish(new Error('O Drive não respondeu.')), 8000)
-    const finish = (error?: Error, value?: DriveResult) => {
-      window.clearTimeout(timer)
-      delete (window as unknown as Record<string, unknown>)[callback]
-      script.remove()
-      if (error) reject(error)
-      else resolve(value ?? { ok: false, pending: true })
-    }
-    ;(window as unknown as Record<string, (value: DriveResult) => void>)[callback] = (value) => finish(undefined, value)
-    script.onerror = () => finish(undefined, { ok: false, pending: true })
-    script.src = `${driveUrl}?id=${encodeURIComponent(requestId)}&callback=${callback}`
-    document.body.appendChild(script)
+  const response = await fetch('/api/drive', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
   })
+  const data = (await response.json().catch(() => ({}))) as DriveResult
+  if (!response.ok || data.ok === false) throw new Error(data.error || 'Não foi possível entrar.')
+  return data
 }
 
 function withAccess(headers: HeadersInit | undefined) {
