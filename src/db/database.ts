@@ -1,5 +1,6 @@
 import Dexie from 'dexie'
 import { authFetch } from '@/auth/api'
+import { readFinanceDocument, usesFirebase, writeFinanceDocument } from '@/auth/firebase'
 
 export interface MemoryTable<T extends { id: string }> {
   toArray(): Promise<T[]>
@@ -175,6 +176,10 @@ class FinanceDatabase {
 
   async save() {
     if (this.hydrating || this.txDepth > 0) return
+    if (usesFirebase()) {
+      await writeFinanceDocument(this.snapshot())
+      return
+    }
     const response = await authFetch('/api/finance', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -188,6 +193,15 @@ class FinanceDatabase {
 
   async open() {
     if (this.opened) return
+    if (usesFirebase()) {
+      const stored = await readFinanceDocument()
+      const data = (stored ?? emptyDatabaseFile()) as DatabaseFile
+      this.hydrating = true
+      this.restore(data)
+      this.hydrating = false
+      this.opened = true
+      return
+    }
     const response = await authFetch('/api/finance', { headers: { Accept: 'application/json' } })
     const type = response.headers.get('content-type') ?? ''
     if (!response.ok || !type.includes('application/json')) {
@@ -229,6 +243,24 @@ class FinanceDatabase {
 }
 
 export const db = new FinanceDatabase()
+
+function emptyDatabaseFile(): DatabaseFile {
+  return {
+    categories: [],
+    transactions: [],
+    settlements: [],
+    recurrences: [],
+    creditCards: [],
+    purchases: [],
+    installmentGroups: [],
+    parties: [],
+    banks: [],
+    bankTransfers: [],
+    bankBalances: [],
+    listOrders: [],
+    settings: null,
+  }
+}
 
 function isEmptyDatabase(data: DatabaseFile) {
   return (

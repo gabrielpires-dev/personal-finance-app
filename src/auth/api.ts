@@ -1,3 +1,5 @@
+import { loginWithFirebase, usesFirebase } from '@/auth/firebase'
+
 const refreshKey = 'pf.refresh'
 const accessKey = 'pf.access'
 
@@ -24,6 +26,10 @@ function saveSession(session: SessionResponse) {
 }
 
 export async function login(username: string, password: string) {
+  if (usesFirebase()) {
+    await loginWithFirebase(username, password)
+    return
+  }
   const response = await fetch('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -1,12 +1,19 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { hasRefreshToken, refreshSession } from '@/auth/api'
+import { usesFirebase, watchSession } from '@/auth/firebase'
 import { LoginPage } from '@/pages/LoginPage'
 
 export function AuthGate({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<'loading' | 'anonymous' | 'authenticated'>(hasRefreshToken() ? 'loading' : 'anonymous')
+  const firebase = usesFirebase()
+  const [status, setStatus] = useState<'loading' | 'anonymous' | 'authenticated'>(firebase || hasRefreshToken() ? 'loading' : 'anonymous')
 
   useEffect(() => {
-    if (status !== 'loading') return
+    if (!firebase) return
+    return watchSession((signedIn) => setStatus(signedIn ? 'authenticated' : 'anonymous'))
+  }, [firebase])
+
+  useEffect(() => {
+    if (firebase || status !== 'loading') return
     let active = true
     refreshSession()
       .then((ok) => {
@@ -18,7 +25,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return () => {
       active = false
     }
-  }, [status])
+  }, [firebase, status])
 
   if (status === 'loading') return <p className="p-6 text-sm text-muted-foreground">Carregando sessão...</p>
   if (status === 'anonymous') return <LoginPage onSuccess={() => setStatus('authenticated')} />
