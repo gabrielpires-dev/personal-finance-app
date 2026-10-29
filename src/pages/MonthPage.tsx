@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as Dialog from '@radix-ui/react-dialog'
 import { ChevronDown, ChevronRight, Circle, CircleCheck, GripVertical, Plus } from 'lucide-react'
 import { todayISO } from '@/domain/dates'
+import { bankMonthBalances } from '@/domain/bank-balance'
 import { projectInvoices } from '@/domain/invoices'
 import { displayOrder, flowItems, idsAfterStatusChange, totalsFor } from '@/domain/summary'
 import { pendingCents } from '@/domain/settlement'
@@ -55,6 +56,16 @@ export function MonthPage() {
     return flowItems({ ...snapshot, cards: snapshot.creditCards }).filter((item) => item.competence === competence)
   }, [snapshot, competence])
   const totals = totalsFor(items, competence)
+  const bankBalanceCents = snapshot
+    ? bankMonthBalances({
+        competence,
+        banks: snapshot.banks ?? [],
+        transactions: snapshot.transactions,
+        settlements: snapshot.settlements,
+        transfers: snapshot.bankTransfers ?? [],
+        adjustments: snapshot.bankBalances ?? [],
+      }).reduce((sum, balance) => sum + balance.cents, 0)
+    : 0
   const positions = useMemo(() => new Map((snapshot?.listOrders ?? []).map((order) => [order.id, order.position])), [snapshot])
   const income = displayOrder(
     items.filter((item) => item.kind === 'income'),
@@ -82,7 +93,7 @@ export function MonthPage() {
       <div className="hidden md:block">
         <CompetenceSwitcher competence={competence} onChange={setCompetence} slide showFavorite />
       </div>
-      <MobileTotals totals={totals} />
+      <MobileTotals totals={totals} bankBalanceCents={bankBalanceCents} />
       <div className="overflow-hidden">
       <div key={competence} className={cn(monthSlide === 'forward' && 'month-forward', monthSlide === 'back' && 'month-back')}>
       {focus === 'cards' ? <p className="mt-3 text-sm text-muted-foreground">Exibindo somente as faturas de cartão desta competência.</p> : null}
@@ -140,7 +151,7 @@ export function MonthPage() {
           onReorder={(ids) => mutate(() => finance.saveListOrder(ids))}
           onCreate={() => navigate('/novo', { state: { kind: 'expense', month: competence, returnToMonth: true } })}
         />
-        <MonthSummary totals={totals} competence={competence} snapshot={snapshot} />
+        <MonthSummary totals={totals} competence={competence} snapshot={snapshot} bankBalanceCents={bankBalanceCents} />
       </div>
       </div>
       </div>
@@ -194,19 +205,19 @@ export function MonthPage() {
   )
 }
 
-function MobileTotals({ totals }: { totals: ReturnType<typeof totalsFor> }) {
+function MobileTotals({ totals, bankBalanceCents }: { totals: ReturnType<typeof totalsFor>; bankBalanceCents: number }) {
   const [top, setTop] = useState(0)
   const rows = [
     [
-      { label: 'A receber', cents: totals.incomePredicted, tone: 'income' as const },
-      { label: 'A pagar', cents: totals.expensePredicted, tone: 'expense' as const },
+      { label: 'A receber', cents: totals.pendingIncome, tone: 'income' as const },
+      { label: 'A pagar', cents: totals.pendingExpense, tone: 'expense' as const },
     ],
     [
       { label: 'Recebido', cents: totals.incomeRealized, tone: 'income' as const },
       { label: 'Pago', cents: totals.expenseRealized, tone: 'expense' as const },
     ],
     [
-      { label: 'Projetado', cents: totals.projectedBalance, tone: 'auto' as const },
+      { label: 'Resultado', cents: totals.pendingIncome - (totals.pendingExpense + bankBalanceCents), tone: 'auto' as const },
       { label: 'Realizado', cents: totals.realizedBalance, tone: 'auto' as const },
     ],
   ]
@@ -249,13 +260,23 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   )
 }
 
-function MonthSummary({ totals, competence, snapshot }: { totals: ReturnType<typeof totalsFor>; competence: string; snapshot: FinanceSnapshot }) {
+function MonthSummary({
+  totals,
+  competence,
+  snapshot,
+  bankBalanceCents,
+}: {
+  totals: ReturnType<typeof totalsFor>
+  competence: string
+  snapshot: FinanceSnapshot
+  bankBalanceCents: number
+}) {
   const rows = [
     { label: 'Recebido', cents: totals.incomeRealized, tone: 'income' as const },
     { label: 'Pago', cents: totals.expenseRealized, tone: 'expense' as const },
-    { label: 'A receber', cents: totals.incomePredicted, tone: 'income' as const },
-    { label: 'A pagar', cents: totals.expensePredicted, tone: 'expense' as const },
-    { label: 'Resultado', cents: totals.projectedBalance, tone: 'auto' as const },
+    { label: 'A receber', cents: totals.pendingIncome, tone: 'income' as const },
+    { label: 'A pagar', cents: totals.pendingExpense, tone: 'expense' as const },
+    { label: 'Resultado', cents: totals.pendingIncome - (totals.pendingExpense + bankBalanceCents), tone: 'auto' as const },
   ]
   return (
     <aside className="col-span-2 md:col-span-1">
